@@ -1,372 +1,30 @@
-#include <allegro.h>
+#include "IconFaceLib.h"
+#include <sys/time.h>
 #include <cmath>
+#include <cstdio>
+#include <vector>
+#include <map>
+#include <string>
 
-#define PI 3.14159265
-
-struct Eye_t
-{
-  char pupilRadius; // pupil radius in polar cordr [0,100]
-  char pupilAngle; // pupil angle in polar cord [0,100]
-  char lidClosure; // eyelid closure factor [0,100]
-  char lidAngle; // eyelid angle factor [-100,100]
-  Eye_t();
-  Eye_t(char pupilRadiusInit, char pupilAngleInit, char lidClosureInit, char lidAngleInit);
-  Eye_t operator+(const Eye_t &add);
-};
-
-Eye_t::Eye_t():
-  pupilRadius(0), pupilAngle(0), lidClosure(0), lidAngle(0)
-{
-}
- 
-Eye_t::Eye_t(char pupilRadiusInit, char pupilAngleInit, char lidClosureInit, char lidAngleInit):
-  pupilRadius(pupilRadiusInit), pupilAngle(pupilAngleInit), lidClosure(lidClosureInit), lidAngle(lidAngleInit)
-{
-}
-
-Eye_t Eye_t::operator+(const Eye_t &add)
-{
-  Eye_t out;
-  out.pupilRadius = this->pupilRadius + add.pupilRadius;
-  out.pupilAngle = this->pupilAngle + add.pupilAngle;
-  out.lidClosure = this->lidClosure + add.lidClosure;
-  out.lidAngle = this->lidAngle + add.lidAngle;
-  return out;
-}
-
-struct CharVector2D_t 
-{
-  char x;
-  char y;
-  CharVector2D_t();
-  CharVector2D_t(char xInit, char yInit);
-  CharVector2D_t(const CharVector2D_t & init);
-  CharVector2D_t operator*(char scale);
-  CharVector2D_t operator+(const CharVector2D_t &add);
-};
-
-CharVector2D_t::CharVector2D_t()
-{
-  x=0;
-  y=0;
-}
-
-CharVector2D_t::CharVector2D_t(char xInit, char yInit)
-{
-  x=xInit;
-  y=yInit;
-}
-
-CharVector2D_t::CharVector2D_t(const CharVector2D_t & init)
-{
-  x=init.x;
-  y=init.y;
-}
-
-CharVector2D_t CharVector2D_t::operator*(char scale)
-{
-  CharVector2D_t out;
-  out.x = this->x * scale / 100;
-  out.y = this->y * scale /100;
-  return out;
-}
-
-CharVector2D_t CharVector2D_t::operator+(const CharVector2D_t & add)
-{
-  CharVector2D_t out;
-  out.x = this->x + add.x;
-  out.y = this->y + add.y; 
-  return out;
-}
-
-struct Mouth_t{
-  CharVector2D_t left; // position factor 
-  CharVector2D_t top; // position factor  
-  CharVector2D_t bottom; // position factor 
-  CharVector2D_t right; // position factor 
-  Mouth_t();
-  Mouth_t(CharVector2D_t leftInit, CharVector2D_t topInit,
-	  CharVector2D_t bottomInit, CharVector2D_t rightInit);
-  Mouth_t(const Mouth_t & init);
-  Mouth_t operator*(char scale);
-  Mouth_t operator+(const Mouth_t & add);
-};
-
-Mouth_t::Mouth_t():
-  left(0,0), top(0,0), bottom(0,0), right(0,0)
-{
-}
-
-Mouth_t::Mouth_t(CharVector2D_t leftInit, CharVector2D_t topInit, 
-		 CharVector2D_t bottomInit, CharVector2D_t rightInit):
-  left(leftInit), top(topInit), bottom(bottomInit),  right(rightInit)
-{
-}
-
-Mouth_t::Mouth_t(const Mouth_t&init):
-  left(init.left), top(init.top), bottom(init.bottom), right(init.right)
-{
-}
-
-Mouth_t Mouth_t::operator*(char scale)
-{
-  Mouth_t out;
-  out.left = this->left * scale;
-  out.top = this->top * scale;
-  out.bottom = this->bottom * scale;
-  out.right = this->right * scale;
-  return out;
-}
-
-Mouth_t Mouth_t::operator+(const Mouth_t & add)
-{
-  Mouth_t out;
-  out.left = this->left + add.left;
-  out.top = this->top + add.top;
-  out.bottom = this->bottom + add.bottom;
-  out.right = this->right + add.right;
-  return out;
-}
-
-
-
-struct FaceParams_t{
-  Eye_t eyeL;
-  Eye_t eyeR;
-  Mouth_t mouth;
-  FaceParams_t();
-  FaceParams_t(Eye_t eyeLInit, Eye_t eyeRInit, Mouth_t mouthInit);
-  FaceParams_t operator*(char scale);
-  FaceParams_t operator+(const FaceParams_t &add);
-};
-
-FaceParams_t::FaceParams_t():
-  eyeL(), eyeR(), mouth()
-{
-}
-
-FaceParams_t::FaceParams_t(Eye_t eyeLInit, Eye_t eyeRInit, Mouth_t mouthInit):
-  eyeL(eyeLInit), eyeR(eyeRInit), mouth(mouthInit)
-{
-}
-
-FaceParams_t FaceParams_t::operator*(char scale)
-{
-  FaceParams_t out;
-  out.eyeL.pupilRadius = this->eyeL.pupilRadius;
-  out.eyeL.pupilAngle = this->eyeL.pupilAngle;
-  out.eyeL.lidClosure = this->eyeL.lidClosure*scale/100;
-  out.eyeL.lidAngle = this->eyeL.lidAngle*scale/100;
-  out.eyeR.pupilRadius = this->eyeR.pupilRadius;
-  out.eyeR.pupilAngle = this->eyeR.pupilAngle;
-  out.eyeR.lidClosure = this->eyeR.lidClosure*scale/100;
-  out.eyeR.lidAngle = this->eyeR.lidAngle*scale/100;
-  out.mouth = this->mouth*scale;
-  return out;
-}
-
-FaceParams_t FaceParams_t::operator+(const FaceParams_t &add)
-{
-  FaceParams_t out;
-  out.eyeL = this->eyeL + add.eyeL;
-  out.eyeR = this->eyeR + add.eyeR;
-  out.mouth = this->mouth + add.mouth;
-  return out;
-}
-
-class IconFace_t { // iconic head is represented in factor dimmention
-		 // and is scaled while drawing
+class FaceExpression_t {
 public:
-  IconFace_t(int width, int height);
-  void Draw(BITMAP *image); // width and height of the image
-  char SetDim(int width, int height);
-  void SetParams(FaceParams_t params);
-  FaceParams_t _params;
-  int _minDim;
-  float _scaleFactor;
-  int _offsetX;
-  int _offsetY;
-  int _width; 
-  int _height;
-private:
+  FaceParams_t *face;
+  double duration;
+
+  FaceExpression_t();
+  FaceExpression_t(FaceParams_t *faceInit,double durationInit); 
 };
 
-#define TRANSPARENT_COLOR makecol(255,0,255)
-
-IconFace_t::IconFace_t(int width, int height):
-  _params(Eye_t(0,0,10,-5),Eye_t(0,0,10,5),
-	  Mouth_t(CharVector2D_t(50,0), CharVector2D_t(0,0),
-		  CharVector2D_t(0,0),  CharVector2D_t(50,0)))
+FaceExpression_t::FaceExpression_t():
+  face(NULL),duration(0)
 {
-  SetDim(width,height);
 }
 
-char IconFace_t::SetDim(int width, int height){
-  if (width>0 && height>0) {
-    _width = width;
-    _height = height;
-    _minDim = _width < _height ? _width : _height;
-    _scaleFactor = _minDim/5; 
-    _offsetX = (_width - _minDim)/2;
-    _offsetY = (_height - _minDim)/2;
-    return 0;
-  }
-  return 1;
+FaceExpression_t::FaceExpression_t(FaceParams_t *faceInit,double durationInit):
+  face(faceInit), duration(durationInit)
+{  
 }
 
-void IconFace_t::SetParams(FaceParams_t params){
-  _params=params;
-}
-
-void IconFace_t::Draw(BITMAP *image){
-  int lipsWidth = _scaleFactor/6;
-  int lipsWidth_2 = lipsWidth/2;
-
-  int eyeLeft_X = _offsetX + _scaleFactor;
-  int eyeLeft_Y = _offsetY + _scaleFactor;
-  int eyeRight_X = _offsetX + 3*_scaleFactor;
-  int eyeRight_Y = _offsetY + _scaleFactor;
-  int mouth_X = _offsetX + _scaleFactor;
-  int mouth_Y = _offsetY + 2*_scaleFactor;
-
-  int eyelidLeft_Closure = _params.eyeL.lidClosure;
-  int eyelidRight_Closure = _params.eyeR.lidClosure;
-  int eyelidLeft_Angle = 128 * _params.eyeL.lidAngle / 100; //in Allegro
-						       //255 is a 2Pi
-  int eyelidRight_Angle = 128 * _params.eyeR.lidAngle / 100;
-  int pupilLeft_Radius = _params.eyeL.pupilRadius;
-  int pupilLeft_Angle = _params.eyeL.pupilAngle+25;
-  int pupilLeft_DX = _scaleFactor/3 * pupilLeft_Radius*cos(1.0*pupilLeft_Angle/50*3.14) / 100;
-  int pupilLeft_DY = _scaleFactor/3 * pupilLeft_Radius*sin(1.0*pupilLeft_Angle/50*3.14) / 100;
-  int pupilRight_Radius = _params.eyeR.pupilRadius;
-  int pupilRight_Angle = _params.eyeR.pupilAngle+25;
-  int pupilRight_DX = _scaleFactor/3 * pupilRight_Radius*cos(1.0*pupilRight_Angle/50*3.14) / 100;
-  int pupilRight_DY = _scaleFactor/3 * pupilRight_Radius*sin(1.0*pupilRight_Angle/50*3.14) / 100;
-
-  int eyePupil_X = _scaleFactor/3;
-  int eyePupil_Y = _scaleFactor/3;
-
-  int mouthLeftDX = _scaleFactor * _params.mouth.left.x/100/2 + _scaleFactor;
-  int mouthLeftDY = (_scaleFactor - lipsWidth_2) * _params.mouth.left.y/100/4;
-  int mouthTopDX = 0;
-  int mouthTopDY = (_scaleFactor - lipsWidth_2) * (((int)_params.mouth.top.y+100)*175/200-100)/100;
-  int mouthBottomDX = 0;
-  int mouthBottomDY = (_scaleFactor - lipsWidth_2) * (((int)_params.mouth.bottom.y+100)*175/200-75)/100;
-  int mouthRightDX = _scaleFactor*_params.mouth.right.x/100/2 +  _scaleFactor;
-  int mouthRightDY = (_scaleFactor - lipsWidth_2) * _params.mouth.right.y/100/4;
-  
-  int lipsCenter_X = 3*_scaleFactor/2;
-  int lipsCenter_Y = _scaleFactor;
-
-  int mouthLeftX = lipsCenter_X - mouthLeftDX; 
-  int mouthLeftY = lipsCenter_Y + mouthLeftDY;
-  int mouthTopX = lipsCenter_X + mouthTopDX;
-  int mouthTopY = lipsCenter_Y + mouthTopDY;
-  int mouthBottomX = lipsCenter_X + mouthBottomDX;
-  int mouthBottomY = lipsCenter_Y + mouthBottomDY; 
-  int mouthRightX = lipsCenter_X + mouthRightDX;
-  int mouthRightY = lipsCenter_Y + mouthRightDY;
-
-  static BITMAP *eyelid_l = create_bitmap_ex(32,_scaleFactor+1,_scaleFactor+1);
-  static BITMAP *eyelid_r = create_bitmap_ex(32,_scaleFactor+1,_scaleFactor+1);
-  static BITMAP *eye = create_bitmap_ex(32,_scaleFactor+1,_scaleFactor+1);
-  static BITMAP *pupil = create_bitmap_ex(32,_scaleFactor/3+1,_scaleFactor/3+1);
-  static BITMAP *mouth = create_bitmap_ex(32,4*_scaleFactor+1,3*_scaleFactor+1);
-
-  clear_to_color(eyelid_l,TRANSPARENT_COLOR);// set to transparent
-  clear_to_color(eyelid_r,TRANSPARENT_COLOR);// set to transparent
-  clear_to_color(eye,TRANSPARENT_COLOR);   // set to transparent
-  clear_to_color(pupil,TRANSPARENT_COLOR); // set to transparent
-  clear_to_color(mouth,TRANSPARENT_COLOR);
-
-  // lips contour
-  int toplip_1[8] = {
-    mouthLeftX,  mouthLeftY - lipsWidth_2,
-    mouthTopX,   mouthTopY - lipsWidth_2,
-    mouthTopX,   mouthTopY - lipsWidth_2,
-    mouthRightX, mouthRightY - lipsWidth_2,
-  }; // bottom line of top lip
-  spline(mouth,toplip_1,makecol(255,255,255));
-
-  int toplip_2[8] = {
-    mouthLeftX,  mouthLeftY,
-    mouthTopX,   mouthTopY + lipsWidth_2,
-    mouthTopX,   mouthTopY + lipsWidth_2,
-    mouthRightX, mouthRightY,
-  }; // top line of top lip
-  spline(mouth,toplip_2,makecol(255,255,255)); 
- 
-  int bottomlip_1[8] = {
-    mouthLeftX,   mouthLeftY,
-    mouthBottomX, mouthBottomY - lipsWidth_2,
-    mouthBottomX, mouthBottomY - lipsWidth_2,
-    mouthRightX,  mouthRightY,
-  };  // top line of bottom lip
-  spline(mouth,bottomlip_1,makecol(255,255,255));
-
-  int bottomlip_2[8] = {
-    mouthLeftX,   mouthLeftY + lipsWidth_2,
-    mouthBottomX, mouthBottomY + lipsWidth_2,
-    mouthBottomX, mouthBottomY + lipsWidth_2,
-    mouthRightX,  mouthRightY + lipsWidth_2,
-  }; // bottom line of bottom lip
-  spline(mouth,bottomlip_2,makecol(255,255,255)); 
-  
-  line(mouth, mouthLeftX, mouthLeftY-lipsWidth_2, mouthLeftX, mouthLeftY+lipsWidth_2, makecol( 255, 255, 255));
-  line(mouth, mouthRightX, mouthRightY-lipsWidth_2, mouthRightX, mouthRightY+lipsWidth_2, makecol( 255, 255, 255));
-  
-  // lips collor filling
-  floodfill(mouth, mouthLeftX+1, mouthLeftY+lipsWidth_2/2, makecol(255,255,255));
-  floodfill(mouth, mouthLeftX+1, mouthLeftY-lipsWidth_2/2, makecol(255,255,255));
-   
-  // eyes
-  rectfill(image,0,0,_width, _height, makecol(0,0,0));
-  rectfill(eyelid_l, 0, 0, _scaleFactor, eyelidLeft_Closure*_scaleFactor/100,
-	   makecol(0,0,0));  // black  rectangle
-  rectfill(eyelid_r, 0, 0, _scaleFactor, eyelidRight_Closure*_scaleFactor/100, 
-	   makecol(0,0,0));  // black rectangle
-  circlefill(eye, _scaleFactor/2, _scaleFactor/2, _scaleFactor/2, 
-	     makecol(255,255,255)); // white circle
-  circlefill(pupil, _scaleFactor/6, _scaleFactor/6, _scaleFactor/6,
-	     makecol(0,0,0)); //black circle
-
-
-#if 0   // termporary lines
-  line(image,_offsetX,0,_offsetX,_height,makecol( 255, 0, 0));
-  line(image,_width-_offsetX,0,_width-_offsetX,_height,makecol( 255, 0, 0));
-
-  line(image,0,_offsetY,_width,_offsetY,makecol( 255, 0, 0));
-  line(image,0,_height-_offsetY,_width,_height-_offsetY,makecol( 255, 0, 0));
-
-  for(int i=1;i<6;i++){
-    line(image,0,_offsetY+i*_scaleFactor,_width,_offsetY+i*_scaleFactor,makecol( 0, 255, 0));
-  }
-
-  for(int i=1;i<6;i++){
-    line(image,_offsetX+i*_scaleFactor,0,_offsetX+i*_scaleFactor,_height,makecol( 0, 255, 0));
-  }
-#endif
-
-  // left eye
-  rotate_sprite(image, eye, eyeLeft_X, eyeLeft_Y, ftofix(0));
-  // left pupil
-  rotate_sprite(image, pupil, eyeLeft_X + eyePupil_X + pupilLeft_DX, // modification
-		eyeLeft_Y + eyePupil_Y + pupilLeft_DY, //modification
-		ftofix(0));
-  // left eyelid
-  rotate_sprite(image, eyelid_l, eyeLeft_X, eyeLeft_Y, ftofix(eyelidLeft_Angle));  
-  // right eye
-  rotate_sprite(image, eye, eyeRight_X, eyeRight_Y, ftofix(0));
-  // right pupil
-  rotate_sprite(image ,pupil, eyeRight_X + eyePupil_X + pupilRight_DX, // modification
-		eyeRight_Y + eyePupil_Y + pupilRight_DY, //modification
-		ftofix(0));
-  // right eyelid
-  rotate_sprite(image, eyelid_r, eyeRight_X, eyeRight_Y, ftofix(eyelidRight_Angle));  
-  
-  // mouth
-  rotate_sprite(image, mouth, mouth_X, mouth_Y, ftofix(0));  
-}
 
 void init(int width, int height) {
   int depth, res;
@@ -375,6 +33,7 @@ void init(int width, int height) {
   if (depth == 0) depth = 32;
   set_color_depth(depth);
   res = set_gfx_mode(GFX_AUTODETECT_WINDOWED, width, height, 0, 0);
+  //res = set_gfx_mode(GFX_AUTODETECT_FULLSCREEN, width, height, 0, 0);
   if (res != 0) {
     allegro_message("Allegro error : %s\n",allegro_error);
     exit(-1);
@@ -383,6 +42,8 @@ void init(int width, int height) {
   install_timer();
   install_keyboard();
   install_mouse();
+  printf("sound card detection = [ %s ]\n",install_sound(DIGI_OSS,MIDI_NONE,"")==-1?"FAILED":"OK");
+  set_volume(255,255);
 }
 
 
@@ -397,16 +58,26 @@ int main(int argc, char *argv[])
   int height=600;
   init(width,height);
   static BITMAP *background = create_bitmap_ex(32,width,height);
+  SAMPLE *dzwiek = NULL;
+  dzwiek = load_sample("play2.wav"); 
   
   IconFace_t face(width,height);
 
-  FaceParams_t twarz;
-  FaceParams_t oczy;
-  FaceParams_t usta;
-  FaceParams_t usta_old;
-  FaceParams_t usta_new;
+  FaceParams_t *twarz;
+  FaceParams_t *oczy;
+  FaceParams_t *usta;
+  FaceParams_t *usta_old;
+  FaceParams_t *usta_new;
 
   FaceParams_t params;
+
+  std::map<std::string, FaceParams_t> wzorceEmocji;
+  std::map<std::string, FaceParams_t> wzorceFonemow;
+
+  std::vector<FaceExpression_t> emocje;
+  std::vector<FaceExpression_t> fonemy;
+  int currPhonIter;
+
   FaceParams_t domyslny(Eye_t(0,0,10,-5),Eye_t(0,0,10,5),
 		      Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,0),
 			      CharVector2D_t(0,0), CharVector2D_t(0,0)));
@@ -420,52 +91,92 @@ int main(int argc, char *argv[])
 		      Mouth_t(CharVector2D_t(80,80), CharVector2D_t(0,0),
 			      CharVector2D_t(0,0), CharVector2D_t(80,80)));
 
-  FaceParams_t fonem_o(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-		       Mouth_t(CharVector2D_t(-30,0), CharVector2D_t(0,-30),
-			       CharVector2D_t(0,30), CharVector2D_t(-30,0)));
-
-  FaceParams_t fonem_w(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-		       Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,-30),
-			       CharVector2D_t(0,30), CharVector2D_t(0,0)));
-
-  FaceParams_t fonem_e(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-		       Mouth_t(CharVector2D_t(-20,0), CharVector2D_t(0,-20),
-			       CharVector2D_t(0,10), CharVector2D_t(-20,0)));
-
-  FaceParams_t fonem_l(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-		       Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,-30),
-			       CharVector2D_t(0,0), CharVector2D_t(0,0)));
-
   FaceParams_t fonem_null(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
 		       Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,00),
 			       CharVector2D_t(0,0), CharVector2D_t(0,0)));
- 
   
+  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("default",FaceParams_t(fonem_null)));
+  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("1",FaceParams_t(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
+							      Mouth_t(CharVector2D_t(-30,0), CharVector2D_t(0,-30),
+								      CharVector2D_t(0,30), CharVector2D_t(-30,0)))));
+  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("2",FaceParams_t(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
+									Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,-30),
+										CharVector2D_t(0,30), CharVector2D_t(0,0)))));
+  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("3",FaceParams_t(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
+									Mouth_t(CharVector2D_t(-20,0), CharVector2D_t(0,-20),
+										CharVector2D_t(0,10), CharVector2D_t(-20,0)))));
+  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("4",FaceParams_t(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
+									Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,-30),
+										CharVector2D_t(0,0), CharVector2D_t(0,0)))));
+  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["default"],0.4));  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["1"],0.3));  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["2"],0.4));  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["3"],0.2));  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["4"],0.3));  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["2"],0.3));  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["default"],0.3));  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["2"],0.3));  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["3"],0.3));  
+  fonemy.push_back(FaceExpression_t(&wzorceFonemow["default"],0.3));  
+
+  
+  FaceParams_t *previousPhoneme, *currentPhoneme, *nextPhoneme;
 
   FaceParams_t wynik;
   char skalaTwarz=100;
   char skalaOczy=100;
   char skalaUsta=100;
+  bool zmiana=true;
 
   bool active=true;
   FaceParams_t *paramPtr=&domyslny;
 
-  twarz=domyslny;
-  usta=fonem_null;
-  usta_old=fonem_null;
-  usta_new=fonem_null;
+  twarz=&domyslny;
+  usta=&fonem_null;
+  usta_old=&fonem_null;
+  usta_new=&fonem_null;
 
 
   clear_to_color(background,TRANSPARENT_COLOR);
 
   int refresh_rate = 1;
 
-  long tmp;
+  char prePhoneme;
+  char postPhoneme;
+  
+
+  timeval time_curr; 
+  timeval time_start;
+  timeval time_diff;
+  gettimeofday(&time_start, NULL);
+  double dtime;   
+  double playTime=-1;
+  double timeOffset;
+  double voiceDur;
+  double phoneme_dur=0;
+  double phoneme_start=0;
+  char tmp;
+
+  int voice;
+  
+  //play_sample(dzwiek, 255,127,1000,0);
+  voice=allocate_voice(dzwiek);
+  voiceDur=1.0*dzwiek->len/dzwiek->freq;
 
   while (active) {
     clear_keybuf();    
-    acquire_screen();        
+    acquire_screen(); 
 
+    gettimeofday(&time_curr, NULL);       
+    time_diff.tv_sec = time_curr.tv_sec - time_start.tv_sec;
+    time_diff.tv_usec = time_curr.tv_usec - time_start.tv_usec;
+    dtime = time_diff.tv_sec + (double) time_diff.tv_usec / 1e6;
+    if (voice_get_position(voice)!=-1)
+      playTime=1.0*voice_get_position(voice)/voice_get_frequency(voice);
+    else
+      playTime=0;
+    /*
     if (key[KEY_Q]) {params.eyeL.pupilRadius+=1;}        
     if (key[KEY_A]) {params.eyeL.pupilRadius-=1;}
     if (key[KEY_W]) {params.eyeL.pupilAngle+=1;}
@@ -539,12 +250,12 @@ int main(int argc, char *argv[])
     if (params.mouth.bottom.x<0) params.mouth.bottom.x=0;
     if (params.mouth.bottom.y>100) params.mouth.bottom.y=100;
     if (params.mouth.bottom.y<-100) params.mouth.bottom.y=-100; // bylo -75
-
-    if (key[KEY_F1]) {twarz=domyslny;}
-    else if (key[KEY_F2]) {twarz=radosc;}
-    else if (key[KEY_F3]) {twarz=smutek;}
-    else if (key[KEY_F4]) {twarz=zlosc;}
-    else if (key[KEY_F12]) {twarz=params;}
+    */
+    if (key[KEY_F1]) {twarz=&domyslny;}
+    else if (key[KEY_F2]) {twarz=&radosc;}
+    else if (key[KEY_F3]) {twarz=&smutek;}
+    else if (key[KEY_F4]) {twarz=&zlosc;}
+    else if (key[KEY_F12]) {twarz=&params;}
     //twarz=params;
 
     if (key[KEY_RIGHT]) {skalaTwarz+=1;}
@@ -556,30 +267,44 @@ int main(int argc, char *argv[])
     if (key[KEY_DOWN]) {skalaUsta-=1;}
     if (skalaUsta>100) skalaUsta=100;
     if (skalaUsta<0) skalaUsta=0;
-    
-    tmp++;
 
-    //skalaUsta=100*sin(1.0 * tmp++/100)*sin(1.0 * tmp++/100);
-    switch (tmp) {
-    case 0: usta_old=usta_new; usta_new=fonem_null; break;
-    case 20: usta_old=usta_new; usta_new=fonem_e; break;
-    case 40: usta_old=usta_new; usta_new=fonem_l; break;
-    case 60: usta_old=usta_new; usta_new=fonem_o; break;
-    case 80: usta_old=usta_new; usta_new=fonem_w; break;
-    case 100: usta_old=usta_new; usta_new=fonem_null; break;
-    case 200:
-      usta_old=fonem_null; usta_new=fonem_null;
-      tmp=0;
+
+    if (key[KEY_SPACE] && voice_get_position(voice)<0) {
+      voice_start(voice);
+      playTime=0;
+      currPhonIter=1;
     }
-    if (tmp<120){
-      usta=usta_old*(100-(tmp%20)*5) +  usta_new*((tmp%20)*5);
+
+    if (playTime>0 && playTime<voiceDur && (currPhonIter<fonemy.size())){
+      phoneme_dur=fonemy[currPhonIter].duration;
+      
+      if (zmiana) { // init
+	phoneme_start=playTime; 
+	previousPhoneme=fonemy[currPhonIter-1].face; 
+	currentPhoneme=fonemy[currPhonIter].face; 
+	nextPhoneme=fonemy[currPhonIter+1].face; 
+	zmiana=false; 
+      }
+      if (playTime>=phoneme_start && playTime<phoneme_start+phoneme_dur) {
+	usta_old=fonemy[currPhonIter-1].face;
+	usta_new=fonemy[currPhonIter].face; 
+	tmp=(int)(100*(playTime-phoneme_start)/(phoneme_dur));
+      }
+      if (playTime>phoneme_start+phoneme_dur)  { // init
+	  zmiana=true;
+	  currPhonIter++;
+      }
     }
-    else usta=fonem_null;
+    //usta_old=fonem_null; usta_new=fonem_w;
+    if (tmp<0) tmp=0;
+    if (tmp>100) tmp=100;
+    usta =new  FaceParams_t((*usta_old*(100-tmp)) + (*usta_new*(tmp)));
     
-    wynik=twarz*skalaTwarz + usta*skalaUsta;
+    wynik=*twarz*skalaTwarz + *usta*skalaUsta;
     face.SetParams(wynik);
     face.Draw(background);
-
+    delete usta;
+    
     textprintf_ex( background, font, 10,10, makecol(255,255,255),-1, "eyeL");
     textprintf_ex( background, font, 10,20, makecol(255,255,255),-1, "pupil[R,A] = [%d, %d]",params.eyeL.pupilRadius,params.eyeL.pupilAngle);
     textprintf_ex( background, font, 10,30, makecol(255,255,255),-1, "lid[C,A]   = [%d, %d]",params.eyeL.lidClosure, params.eyeL.lidAngle);
@@ -594,6 +319,13 @@ int main(int argc, char *argv[])
 
     textprintf_ex( background, font, 10,40, makecol(255,255,255),-1, "skalaTwarz = %d",skalaTwarz);
     textprintf_ex( background, font, 10,50, makecol(255,255,255),-1, "skalaUsta = %d",skalaUsta);
+    textprintf_ex( background, font, 10,60, makecol(255,255,255),-1, "time = %f",dtime);
+    textprintf_ex( background, font, 10,70, makecol(255,255,255),-1, "tmp = %d",tmp);
+
+    textprintf_ex( background, font, 10,90, makecol(255,255,255),-1, "pos = %d",voice_get_position(voice));
+    textprintf_ex( background, font, 10,100, makecol(255,255,255),-1, "freq = %d",voice_get_frequency(voice));
+    textprintf_ex( background, font, 10,110, makecol(255,255,255),-1, "T = %f",1.0*voice_get_position(voice)/voice_get_frequency(voice));
+
 
     blit( background, screen, 0,0,0,0, width,height);
 
@@ -616,4 +348,3 @@ int main(int argc, char *argv[])
   return 0;
 }
 END_OF_MAIN()
-

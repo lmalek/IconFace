@@ -14,8 +14,9 @@ if (ALLEGRO_NOTFOUND)
   message(FATAL_ERROR "Can't find Allegro!")
 endif(ALLEGRO_NOTFOUND)
 
+add_library(IconFaceLib src/IconFaceLib.cpp)
 add_executable(IconFace src/IconFace.cpp)
 # include directories for IconFace and Allegro
 include_directories(include ${OPENCV_INCLUDE_DIRS} )
 # linking
-target_link_libraries(IconFace ${ALLEGRO_LIBRARIES})
+target_link_libraries(IconFace IconFaceLib ${ALLEGRO_LIBRARIES})
