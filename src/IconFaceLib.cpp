@@ -8,7 +8,7 @@ Eye_t::Eye_t():
 {
 }
  
-Eye_t::Eye_t(char pupilRadiusInit, char pupilAngleInit, char lidClosureInit, char lidAngleInit):
+Eye_t::Eye_t(short pupilRadiusInit, short pupilAngleInit, short lidClosureInit, short lidAngleInit):
   pupilRadius(pupilRadiusInit), pupilAngle(pupilAngleInit), lidClosure(lidClosureInit), lidAngle(lidAngleInit)
 {
 }
@@ -29,7 +29,7 @@ CharVector2D_t::CharVector2D_t()
   y=0;
 }
 
-CharVector2D_t::CharVector2D_t(char xInit, char yInit)
+CharVector2D_t::CharVector2D_t(short xInit, short yInit)
 {
   x=xInit;
   y=yInit;
@@ -253,8 +253,8 @@ void IconFace_t::Draw(BITMAP *image){
   line(mouth, mouthRightX, mouthRightY-lipsWidth_2, mouthRightX, mouthRightY+lipsWidth_2, makecol( 255, 255, 255));
   
   // lips collor filling
-  floodfill(mouth, mouthLeftX+1, mouthLeftY+lipsWidth_2/2, makecol(255,255,255));
   floodfill(mouth, mouthLeftX+1, mouthLeftY-lipsWidth_2/2, makecol(255,255,255));
+  floodfill(mouth, mouthLeftX+1, mouthLeftY+lipsWidth_2/2, makecol(255,255,255));
    
   // eyes
   rectfill(image,0,0,_width, _height, makecol(0,0,0));

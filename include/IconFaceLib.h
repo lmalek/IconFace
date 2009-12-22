@@ -16,22 +16,22 @@
 
 struct Eye_t
 {
-  char pupilRadius; // pupil radius in polar cordr [0,100]
-  char pupilAngle; // pupil angle in polar cord [0,100]
-  char lidClosure; // eyelid closure factor [0,100]
-  char lidAngle; // eyelid angle factor [-100,100]
+  short pupilRadius; // pupil radius in polar cordr [0,100]
+  short pupilAngle; // pupil angle in polar cord [0,100]
+  short lidClosure; // eyelid closure factor [0,100]
+  short lidAngle; // eyelid angle factor [-100,100]
   Eye_t();
-  Eye_t(char pupilRadiusInit, char pupilAngleInit, char lidClosureInit, char lidAngleInit);
+  Eye_t(short pupilRadiusInit, short pupilAngleInit, short lidClosureInit, short lidAngleInit);
   Eye_t operator+(const Eye_t &add);
 };
 
 
 struct CharVector2D_t 
 {
-  char x;
-  char y;
+  short x;
+  short y;
   CharVector2D_t();
-  CharVector2D_t(char xInit, char yInit);
+  CharVector2D_t(short xInit, short yInit);
   CharVector2D_t(const CharVector2D_t & init);
   CharVector2D_t operator*(char scale);
   CharVector2D_t operator+(const CharVector2D_t &add);

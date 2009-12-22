@@ -5,6 +5,48 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <iostream>
+#include <fstream>
+
+class Dictionary {
+public:
+  std::map<std::string,std::string> translate;
+  std::string language;
+  Dictionary();
+  Dictionary(std::string dictFileName);
+  void loadFile(std::string dictFileName);
+};
+
+Dictionary::Dictionary(){
+}
+
+Dictionary::Dictionary(std::string dictFileName){
+  loadFile(dictFileName);
+}
+
+void Dictionary::loadFile(std::string dictFileName){
+  std::ifstream dictFile;
+  dictFile.open(dictFileName.c_str());
+  std::string phonem, shape;
+  if (dictFile.is_open())
+  {
+    getline (dictFile,language);
+    while (! dictFile.eof() )
+    {
+      dictFile>>phonem>>shape;
+      translate.insert(std::pair<std::string, std::string>(phonem,shape));
+    }
+    dictFile.close();
+  }
+  /*
+  std::map<std::string,std::string>::iterator it;
+  for ( it=dict.begin() ; it != dict.end(); it++ )
+    std::cout << (*it).first << " => " << (*it).second << std::endl;
+  */
+}
+
+
+
 
 class FaceExpression_t {
 public:
@@ -25,7 +67,101 @@ FaceExpression_t::FaceExpression_t(FaceParams_t *faceInit,double durationInit):
 {  
 }
 
+/**********************************************************************/
 
+class Morphings:std::map<std::string, FaceParams_t> {
+public:
+  std::map<std::string, FaceParams_t> morph;
+  Morphings();
+  Morphings(std::string morphFileName);
+  void loadFile(std::string morphFileName);
+  void insert(std::string morphName, FaceParams_t morphShape);
+  FaceParams_t& operator[](const std::string& morphName );
+};
+
+Morphings::Morphings()
+{
+}
+
+Morphings::Morphings(std::string morphFileName){
+  loadFile(morphFileName);
+}
+
+void Morphings::loadFile(std::string morphFileName){
+  std::ifstream morphFile;
+  morphFile.open(morphFileName.c_str());
+  std::string morphName;
+  Eye_t eyeLeft, eyeRight;
+  Mouth_t mouth;
+  if (morphFile.is_open()) {
+    while (! morphFile.eof() ) {
+      morphFile>>morphName;
+      morphFile>>eyeLeft.pupilRadius>>eyeLeft.pupilAngle>>eyeLeft.lidClosure>>eyeLeft.lidAngle;
+      morphFile>>eyeRight.pupilRadius>>eyeRight.pupilAngle>>eyeRight.lidClosure>>eyeRight.lidAngle;      
+      morphFile>>mouth.left.x>>mouth.left.y;
+      morphFile>>mouth.top.x>>mouth.top.y;
+      morphFile>>mouth.bottom.x>>mouth.bottom.y;
+      morphFile>>mouth.right.x>>mouth.right.y;
+      /*
+      std::cout<<morphName<<"|";
+      std::cout<<eyeLeft.pupilRadius<<" "<<eyeLeft.pupilAngle<<" "<<eyeLeft.lidClosure<<" "<<eyeLeft.lidAngle<<"|";
+      std::cout<<eyeRight.pupilRadius<<" "<<eyeRight.pupilAngle<<" "<<eyeRight.lidClosure<<" "<<eyeRight.lidAngle<<"|";      
+      std::cout<<mouth.left.x<<" "<<mouth.left.y<<" ";
+      std::cout<<mouth.top.x<<" "<<mouth.top.y<<" ";
+      std::cout<<mouth.bottom.x<<" "<<mouth.bottom.y<<" ";
+      std::cout<<mouth.right.x<<" "<<mouth.right.y;
+      std::cout<<std::endl;
+      */
+      morph.insert(std::pair<std::string, FaceParams_t>(morphName,FaceParams_t(eyeLeft,eyeRight,mouth)));
+    }
+    morphFile.close();
+  }
+}
+
+void Morphings::insert(std::string morphName, FaceParams_t morphShape){
+  morph.insert(std::pair<std::string, FaceParams_t>(morphName,morphShape));
+}
+
+FaceParams_t& Morphings::operator[](const std::string& morphName ){
+  return morph[morphName];
+}
+
+
+/**********************************************************************/
+
+class PhoScenario{
+public:
+  std::string name;
+  PhoScenario(Dictionary *dictInit,Morphings *wzorceFonemowInit);
+  void load(std::string phoFileName);
+  std::vector<FaceExpression_t> pho;
+  Dictionary *dict;
+  Morphings *wzorceFonemow;
+};
+
+PhoScenario::PhoScenario(Dictionary *dictInit,Morphings *wzorceFonemowInit)
+{
+  dict=dictInit;
+  wzorceFonemow=wzorceFonemowInit;
+}
+
+void PhoScenario::load(std::string phoFileName){
+  std::ifstream phoFile;
+  phoFile.open(phoFileName.c_str());
+  std::string phoName;
+  float phoDur;
+  if (phoFile.is_open()) {
+    while (! phoFile.eof() ) {
+      phoFile>>phoName>>phoDur;
+      std::cout<<dict->translate[phoName]<<" "<<phoDur<<std::endl;
+      pho.push_back(FaceExpression_t(&(wzorceFonemow->morph[dict->translate[phoName]]),phoDur));  
+    }
+    phoFile.close();
+  }
+}
+
+
+/**********************************************************************/
 void init(int width, int height) {
   int depth, res;
   allegro_init();
@@ -59,7 +195,7 @@ int main(int argc, char *argv[])
   init(width,height);
   static BITMAP *background = create_bitmap_ex(32,width,height);
   SAMPLE *dzwiek = NULL;
-  dzwiek = load_sample("play2.wav"); 
+  dzwiek = load_sample("test.wav"); 
   
   IconFace_t face(width,height);
 
@@ -71,57 +207,21 @@ int main(int argc, char *argv[])
 
   FaceParams_t params;
 
-  std::map<std::string, FaceParams_t> wzorceEmocji;
-  std::map<std::string, FaceParams_t> wzorceFonemow;
+  Morphings wzorceEmocji;
+  Morphings wzorceFonemow;
 
   std::vector<FaceExpression_t> emocje;
-  std::vector<FaceExpression_t> fonemy;
+  //  std::vector<FaceExpression_t> fonemy;
   int currPhonIter;
 
-  FaceParams_t domyslny(Eye_t(0,0,10,-5),Eye_t(0,0,10,5),
-		      Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,0),
-			      CharVector2D_t(0,0), CharVector2D_t(0,0)));
-  FaceParams_t smutek(Eye_t(0,0,45,-21),Eye_t(0,0,45,21),
-		      Mouth_t(CharVector2D_t(-80,80), CharVector2D_t(0,-30),
-			      CharVector2D_t(0,-30), CharVector2D_t(-80,80)));
-  FaceParams_t radosc(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-		      Mouth_t(CharVector2D_t(80,-80), CharVector2D_t(0,80),
-			      CharVector2D_t(0,80), CharVector2D_t(80,-80)));
-  FaceParams_t zlosc(Eye_t(0,0,45,21),Eye_t(0,0,45,-21),
-		      Mouth_t(CharVector2D_t(80,80), CharVector2D_t(0,0),
-			      CharVector2D_t(0,0), CharVector2D_t(80,80)));
+  wzorceEmocji.loadFile("emocje.dat");
+  wzorceFonemow.loadFile("fonemy.dat");
+  Dictionary dict("english.dic");
 
-  FaceParams_t fonem_null(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-		       Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,00),
-			       CharVector2D_t(0,0), CharVector2D_t(0,0)));
-  
-  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("default",FaceParams_t(fonem_null)));
-  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("1",FaceParams_t(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-							      Mouth_t(CharVector2D_t(-30,0), CharVector2D_t(0,-30),
-								      CharVector2D_t(0,30), CharVector2D_t(-30,0)))));
-  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("2",FaceParams_t(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-									Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,-30),
-										CharVector2D_t(0,30), CharVector2D_t(0,0)))));
-  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("3",FaceParams_t(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-									Mouth_t(CharVector2D_t(-20,0), CharVector2D_t(0,-20),
-										CharVector2D_t(0,10), CharVector2D_t(-20,0)))));
-  wzorceFonemow.insert(std::pair<std::string, FaceParams_t>("4",FaceParams_t(Eye_t(0,0,0,0),Eye_t(0,0,0,0),
-									Mouth_t(CharVector2D_t(0,0), CharVector2D_t(0,-30),
-										CharVector2D_t(0,0), CharVector2D_t(0,0)))));
-  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["default"],0.4));  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["1"],0.3));  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["2"],0.4));  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["3"],0.2));  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["4"],0.3));  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["2"],0.3));  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["default"],0.3));  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["2"],0.3));  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["3"],0.3));  
-  fonemy.push_back(FaceExpression_t(&wzorceFonemow["default"],0.3));  
-
-  
+  PhoScenario scenariusz(&dict,&wzorceFonemow);
+  scenariusz.load("test.pho");
   FaceParams_t *previousPhoneme, *currentPhoneme, *nextPhoneme;
+  double previousPhonemeEndTime;
 
   FaceParams_t wynik;
   char skalaTwarz=100;
@@ -130,12 +230,12 @@ int main(int argc, char *argv[])
   bool zmiana=true;
 
   bool active=true;
-  FaceParams_t *paramPtr=&domyslny;
+  FaceParams_t *paramPtr=&wzorceEmocji["default"];
 
-  twarz=&domyslny;
-  usta=&fonem_null;
-  usta_old=&fonem_null;
-  usta_new=&fonem_null;
+  twarz=&wzorceEmocji["default"];
+  usta=&wzorceFonemow["default"];
+  usta_old=&wzorceFonemow["default"];
+  usta_new=&wzorceFonemow["default"];
 
 
   clear_to_color(background,TRANSPARENT_COLOR);
@@ -159,10 +259,13 @@ int main(int argc, char *argv[])
   char tmp;
 
   int voice;
+  int counter;
   
   //play_sample(dzwiek, 255,127,1000,0);
   voice=allocate_voice(dzwiek);
-  voiceDur=1.0*dzwiek->len/dzwiek->freq;
+  voice_set_frequency(voice,voice_get_frequency(voice));
+  voiceDur=1.0*dzwiek->len/voice_get_frequency(voice);
+
 
   while (active) {
     clear_keybuf();    
@@ -251,11 +354,11 @@ int main(int argc, char *argv[])
     if (params.mouth.bottom.y>100) params.mouth.bottom.y=100;
     if (params.mouth.bottom.y<-100) params.mouth.bottom.y=-100; // bylo -75
     */
-    if (key[KEY_F1]) {twarz=&domyslny;}
-    else if (key[KEY_F2]) {twarz=&radosc;}
-    else if (key[KEY_F3]) {twarz=&smutek;}
-    else if (key[KEY_F4]) {twarz=&zlosc;}
-    else if (key[KEY_F12]) {twarz=&params;}
+    if (key[KEY_F1]) {twarz=&wzorceEmocji["default"];}
+    else if (key[KEY_F2]) {twarz=&wzorceEmocji["happy"];}
+    else if (key[KEY_F3]) {twarz=&wzorceEmocji["sad"];}
+    else if (key[KEY_F4]) {twarz=&wzorceEmocji["angry"];}
+    //else if (key[KEY_F12]) {twarz=&params;}
     //twarz=params;
 
     if (key[KEY_RIGHT]) {skalaTwarz+=1;}
@@ -272,38 +375,39 @@ int main(int argc, char *argv[])
     if (key[KEY_SPACE] && voice_get_position(voice)<0) {
       voice_start(voice);
       playTime=0;
-      currPhonIter=1;
+      currPhonIter=0;
+      zmiana=true;
+      counter=0;
+      previousPhoneme=scenariusz.pho[0].face;
+      previousPhonemeEndTime=0;
     }
-
-    if (playTime>0 && playTime<voiceDur && (currPhonIter<fonemy.size())){
-      phoneme_dur=fonemy[currPhonIter].duration;
-      
-      if (zmiana) { // init
-	phoneme_start=playTime; 
-	previousPhoneme=fonemy[currPhonIter-1].face; 
-	currentPhoneme=fonemy[currPhonIter].face; 
-	nextPhoneme=fonemy[currPhonIter+1].face; 
-	zmiana=false; 
-      }
-      if (playTime>=phoneme_start && playTime<phoneme_start+phoneme_dur) {
-	usta_old=fonemy[currPhonIter-1].face;
-	usta_new=fonemy[currPhonIter].face; 
-	tmp=(int)(100*(playTime-phoneme_start)/(phoneme_dur));
-      }
-      if (playTime>phoneme_start+phoneme_dur)  { // init
-	  zmiana=true;
-	  currPhonIter++;
-      }
+    
+    while (playTime>=scenariusz.pho[currPhonIter].duration && currPhonIter<scenariusz.pho.size() &&  playTime<=voiceDur){
+      previousPhonemeEndTime=scenariusz.pho[currPhonIter].duration;
+      previousPhoneme=scenariusz.pho[currPhonIter].face;
+      currPhonIter++;
     }
-    //usta_old=fonem_null; usta_new=fonem_w;
+    currentPhoneme=scenariusz.pho[currPhonIter].face;
+    tmp=100.0*(scenariusz.pho[currPhonIter].duration-playTime)/(scenariusz.pho[currPhonIter].duration-previousPhonemeEndTime);
     if (tmp<0) tmp=0;
     if (tmp>100) tmp=100;
-    usta =new  FaceParams_t((*usta_old*(100-tmp)) + (*usta_new*(tmp)));
+    tmp=(1-cos(3.14/100*tmp))*100;
+    if (tmp<0) tmp=0;
+    if (tmp>100) tmp=100;
+
+    //usta =new  FaceParams_t((*previousPhoneme*(100-tmp)) +(*currentPhoneme*(tmp)));
+    usta =new  FaceParams_t((*currentPhoneme));
     
     wynik=*twarz*skalaTwarz + *usta*skalaUsta;
     face.SetParams(wynik);
     face.Draw(background);
-    delete usta;
+
+    /*
+      if (currPhonIter>=scenariusz.pho.size() && playTime<voiceDur){
+      currPhonIter=1;
+    }
+    */
+
     
     textprintf_ex( background, font, 10,10, makecol(255,255,255),-1, "eyeL");
     textprintf_ex( background, font, 10,20, makecol(255,255,255),-1, "pupil[R,A] = [%d, %d]",params.eyeL.pupilRadius,params.eyeL.pupilAngle);
@@ -325,12 +429,17 @@ int main(int argc, char *argv[])
     textprintf_ex( background, font, 10,90, makecol(255,255,255),-1, "pos = %d",voice_get_position(voice));
     textprintf_ex( background, font, 10,100, makecol(255,255,255),-1, "freq = %d",voice_get_frequency(voice));
     textprintf_ex( background, font, 10,110, makecol(255,255,255),-1, "T = %f",1.0*voice_get_position(voice)/voice_get_frequency(voice));
-
+    
+    textprintf_ex( background, font, 10,120, makecol(255,255,255),-1, "currPhonIter = %d/%d",currPhonIter,scenariusz.pho.size());
+    textprintf_ex( background, font, 10,130, makecol(255,255,255),-1, "counter = %d",counter);
+    textprintf_ex( background, font, 10,140, makecol(255,255,255),-1, "currDuration = %f",scenariusz.pho[currPhonIter].duration);
+    
 
     blit( background, screen, 0,0,0,0, width,height);
 
     release_screen();
 
+    delete usta;
     /*
      *  WYJSCIE
      */
