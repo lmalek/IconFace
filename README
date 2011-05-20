@@ -1,0 +1,53 @@
+IconFace 
+Very simple virtual face
+
+--------------------------------------------------------------------------------
+INFO
+--------------------------------------------------------------------------------
+
+IconFace is an open source software for animation of veri simple virtual iconic face.
+Graphic is based on allegro.cc library http://www.allegro.cc/
+This software is distributed under LGPL licence. Use it on your own risk.
+
+--------------------------------------------------------------------------------
+INSTALATION
+--------------------------------------------------------------------------------
+
+This library is prepared to work with the cmake
+to instal compile IconFace library create new directory
+
+mkdir build
+
+then run cmake, ccmake or cmake-gui to configure project
+
+ccmake ../
+
+after configuring project type
+
+make
+
+To compile example of using this library type
+
+cmake -D EXAMPLES_ENABLE=ON ../
+
+Alternatively one can type
+
+ccmake ../
+
+or
+
+cmake-gui ../
+
+and select option EXAMPLES_ENABLE
+
+
+--------------------------------------------------------------------------------
+NOTES
+--------------------------------------------------------------------------------
+
+For proper running of the API one shoud have the following library.
+- pthread
+To compile example one should have
+- allegro
+
+
